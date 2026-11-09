@@ -23,7 +23,7 @@ def exportar(clientes: List[Tuple], arquivo: str = CSV_FILENAME) -> None:
     try:
         with open(arquivo, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow(['ID', 'Nome', 'Email', 'Telefone', 'Criado em'])
+            writer.writerow(['ID', 'Nome', 'Email', 'Telefone', 'Criado em', 'Atualizado em'])
             writer.writerows(clientes)
         
         log(f'Sucesso: {len(clientes)} cliente(s) exportado(s) para {arquivo}')
