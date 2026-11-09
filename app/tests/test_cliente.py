@@ -3,7 +3,9 @@
 import unittest
 import sys
 import os
-import sqlite3
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
 
 # Adicionar o diretório pai ao path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -16,27 +18,20 @@ class TestClienteController(unittest.TestCase):
     """Testes para o ClienteController."""
     
     def setUp(self):
-        """Preparação antes de cada teste."""
+        """Cada teste usa seu próprio banco e diretório de logs temporários."""
+        pasta = tempfile.TemporaryDirectory()
+        self.addCleanup(pasta.cleanup)
+        banco = patch('app.models.database.DATABASE_PATH', str(Path(pasta.name) / 'clientes.db'))
+        banco.start()
+        self.addCleanup(banco.stop)
+        logs = patch('app.services.log_service.LOG_DIR', pasta.name)
+        logs.start()
+        self.addCleanup(logs.stop)
+        arquivo_log = patch('app.services.log_service.LOG_FILE', str(Path(pasta.name) / 'teste.log'))
+        arquivo_log.start()
+        self.addCleanup(arquivo_log.stop)
         self.ctrl = ClienteController()
         init_db()
-        # Limpar banco para cada teste
-        try:
-            connection = conn()
-            connection.execute('DELETE FROM clientes')
-            connection.commit()
-            close_connection(connection)
-        except sqlite3.Error:
-            pass
-    
-    def tearDown(self):
-        """Limpeza após cada teste."""
-        try:
-            connection = conn()
-            connection.execute('DELETE FROM clientes')
-            connection.commit()
-            close_connection(connection)
-        except sqlite3.Error:
-            pass
     
     # Testes de validação de email
     def test_validar_email_valido(self):
@@ -106,6 +101,45 @@ class TestClienteController(unittest.TestCase):
         clientes = self.ctrl.listar()
         self.assertEqual(len(clientes), 2)
     
+    def test_atualizar_cliente(self):
+        self.ctrl.criar('João', 'joao@email.com', '11999999999')
+        cliente_id = self.ctrl.listar()[0][0]
+        self.ctrl.atualizar(cliente_id, 'Maria Silva', ' MARIA@EMAIL.COM ', '11988888888')
+        cliente = self.ctrl.listar()[0]
+        self.assertEqual(cliente[1:4], ('Maria Silva', 'maria@email.com', '11988888888'))
+
+    def test_atualizar_rejeita_nome_e_telefone_invalidos(self):
+        self.ctrl.criar('João', 'joao@email.com', '11999999999')
+        cliente_id = self.ctrl.listar()[0][0]
+        for nome, telefone in [('Jo', '11999999999'), ('João', 'abcdefghijk')]:
+            with self.subTest(nome=nome, telefone=telefone), self.assertRaises(ValueError):
+                self.ctrl.atualizar(cliente_id, nome, 'joao@email.com', telefone)
+        self.assertEqual(self.ctrl.listar()[0][1], 'João')
+
+    def test_atualizar_rejeita_email_duplicado(self):
+        self.ctrl.criar('João', 'joao@email.com', '11999999999')
+        self.ctrl.criar('Maria', 'maria@email.com', '11988888888')
+        cliente_id = self.ctrl.listar()[0][0]
+        with self.assertRaises(ValueError):
+            self.ctrl.atualizar(cliente_id, 'João', 'maria@email.com', '11999999999')
+
+    def test_telefone_rejeita_letras(self):
+        self.assertFalse(self.ctrl._validar_telefone('abcdefghijk'))
+
+    def test_exportacao_tem_cabecalho_alinhado(self):
+        import csv
+        from app.services.csv_service import exportar
+
+        self.ctrl.criar('João', 'joao@email.com', '11999999999')
+        with tempfile.TemporaryDirectory() as pasta:
+            arquivo = Path(pasta) / 'clientes.csv'
+            exportar(self.ctrl.listar(), arquivo)
+            with arquivo.open(encoding='utf-8', newline='') as fonte:
+                linhas = list(csv.reader(fonte))
+        self.assertEqual(len(linhas[0]), 6)
+        self.assertEqual(len(linhas[0]), len(linhas[1]))
+        self.assertEqual(linhas[1][1], 'João')
+
     # Testes de exclusão
     def test_excluir_cliente(self):
         """Testa exclusão de cliente."""
