@@ -33,7 +33,10 @@ class ClienteController:
         Returns:
             bool: True se telefone é válido, False caso contrário.
         """
-        return len(telefone.replace(' ', '').replace('-', '')) >= MIN_TELEFONE_LENGTH
+        if re.search(r'[^0-9\s()+-]', telefone):
+            return False
+        digitos = re.sub(r'[^0-9]', '', telefone)
+        return len(digitos) >= MIN_TELEFONE_LENGTH
     
     @staticmethod
     def _validar_nome(nome: str) -> bool:
@@ -133,8 +136,14 @@ class ClienteController:
         if not nome or not email or not telefone:
             raise ValueError(MENSAGENS['campos_vazios'])
         
+        if not self._validar_nome(nome):
+            raise ValueError(MENSAGENS['nome_invalido'])
+
         if not self._validar_email(email):
             raise ValueError(MENSAGENS['email_invalido'])
+
+        if not self._validar_telefone(telefone):
+            raise ValueError(MENSAGENS['telefone_invalido'])
         
         connection = None
         try:
