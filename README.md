@@ -1,128 +1,89 @@
-# Sistema de Gestão de Clientes v2.0
+# Sistema de gestão de clientes
 
-Uma aplicação desktop moderna para gerenciar clientes com interface gráfica intuitiva, desenvolvida com Python e customtkinter.
+Aplicação desktop de portfólio para cadastrar, consultar e excluir clientes, persistir dados em SQLite e exportá-los para CSV.
 
-## ✨ Funcionalidades
+**Tecnologias:** Python, CustomTkinter, SQLite e unittest.
 
-- ✅ **Cadastro de Clientes** - Adicione novos clientes com validação de dados
-- ✅ **Listagem** - Visualize todos os clientes em uma tabela interativa
-- ✅ **Edição** - Atualize dados de clientes existentes
-- ✅ **Exclusão** - Remova clientes com confirmação
-- ✅ **Exportação** - Exporte dados para arquivo CSV
-- ✅ **Validações** - Email e telefone são validados automaticamente
-- ✅ **Logging** - Registro detalhado de todas as operações
-- ✅ **Banco de Dados** - Persistência de dados em SQLite
+## Funcionalidades e escopo
 
-## 🛠️ Tecnologias
+| Recurso | Disponibilidade |
+| --- | --- |
+| Cadastro, listagem e exclusão com confirmação | Interface gráfica |
+| Validação de nome, e-mail e telefone | Controlador |
+| Normalização de e-mail e bloqueio de duplicatas | Controlador e SQLite |
+| Atualização de dados | API Python do controlador |
+| Exportação CSV com datas de criação e atualização | Interface e serviço |
+| Testes com banco e logs temporários | Suíte automatizada |
 
-- **Python 3.12+**
-- **customtkinter** - Interface gráfica moderna
-- **SQLite** - Banco de dados local
-- **unittest** - Testes automatizados
+A interface ainda não possui formulário de edição. A atualização está implementada em `ClienteController.atualizar()` e coberta por testes.
 
-## 📋 Pré-requisitos
+## Executar localmente
 
-- Python 3.8+
-- pip (gerenciador de pacotes Python)
+Use Python 3.12 e Git, em um ambiente com interface gráfica e Tk disponível.
 
-## 🚀 Instalação
-
-1. Clone ou baixe o projeto:
-```bash
+~~~bash
 git clone https://github.com/heldersegundo28/sistema-clientes-python.git
 cd sistema-clientes-python
-```
-
-2. Crie um ambiente virtual (recomendado):
-```bash
 python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# Linux/Mac
-source .venv/bin/activate
-```
+~~~
 
-3. Instale as dependências:
-```bash
-pip install -r requirements.txt
-```
+Ative no PowerShell:
 
-## 🎯 Como Usar
+~~~powershell
+.\.venv\Scripts\Activate.ps1
+~~~
 
-### Executar a Aplicação
+No Linux/macOS, use `source .venv/bin/activate`.
 
-```bash
+~~~bash
+python -m pip install -r requirements.txt
 python main.py
-```
+~~~
 
-### Executar Testes
+No Linux, o Tk pode precisar ser instalado pelo gerenciador de pacotes da distribuição.
 
-```bash
-python -m unittest app.tests.test_cliente -v
-```
+## Uso e dados locais
 
-## 📁 Estrutura do Projeto
+1. Preencha nome, e-mail e telefone e clique em **Cadastrar**.
+2. Consulte os registros na tabela.
+3. Selecione um cliente para excluí-lo, confirmando a operação.
+4. Use **Exportar CSV** para gerar `clientes.csv`.
 
-```
-sistema-clientes-python/
-├── main.py                          # Arquivo principal
-├── requirements.txt                 # Dependências
-├── README.md                        # Documentação
-├── .gitignore                       # Arquivos ignorados
-├── app/
-│   ├── config.py                    # Configurações
-│   ├── controllers/
-│   │   └── cliente_controller.py    # Lógica de negócio
-│   ├── models/
-│   │   └── database.py              # Banco de dados
-│   ├── services/
-│   │   ├── csv_service.py           # Exportação CSV
-│   │   └── log_service.py           # Logging
-│   └── tests/
-│       └── test_cliente.py          # Testes
-└── logs/
-    └── sistema.log                  # Logs de operações
-```
+O banco `clientes.db` e os logs são criados no diretório de execução. Os parâmetros ficam em `app/config.py`. O arquivo `.env.example` é apenas uma referência e não é carregado automaticamente nesta versão.
 
-## ✔️ Validações
+## Testes
 
-- **Email**: Formato válido, sem duplicatas, normalizado para minúsculas
-- **Telefone**: Mínimo 10 caracteres
-- **Nome**: Mínimo 3 caracteres
+~~~bash
+python -m unittest discover -s app/tests -v
+~~~
 
-## 🧪 Testes
+Cada teste usa um banco temporário separado do banco da aplicação. A suíte verifica cadastro, normalização e duplicidade de e-mail, atualização, validações, exclusão e alinhamento das colunas do CSV.
 
-```bash
-python -m unittest app.tests.test_cliente -v
-```
+## Organização
 
-Cobertura: 9+ testes automatizados
+| Caminho | Responsabilidade |
+| --- | --- |
+| `main.py` | Interface e inicialização |
+| `app/controllers/cliente_controller.py` | Operações e validações |
+| `app/models/database.py` | Conexão e criação da tabela SQLite |
+| `app/services/` | Exportação CSV e logs |
+| `app/tests/` | Testes automatizados |
 
-## 📝 Principais Classes
+Exemplo do controlador, em um diretório de demonstração:
 
-### ClienteController
-Gerencia operações CRUD de clientes com validações robustas
-
-### DatabaseManager
-Gerencia conexões e operações com SQLite
-
-### SistemaClientes (GUI)
-Interface gráfica com customtkinter
-
-## 📊 Exemplo de Uso
-
-```python
+~~~python
+from app.models.database import init_db
 from app.controllers.cliente_controller import ClienteController
 
+init_db()
 ctrl = ClienteController()
-ctrl.criar('João Silva', 'joao@email.com', '11999999999')
-clientes = ctrl.listar()
-```
+ctrl.criar("Cliente Exemplo", "cliente@example.com", "11999999999")
+cliente_id = ctrl.listar()[0][0]
+ctrl.atualizar(cliente_id, "Cliente Atualizado", "cliente@example.com", "11988888888")
+~~~
 
-## 🐛 Tratamento de Erros
+## Limitações
 
-Todos os erros são capturados e logados em `logs/sistema.log`
+Aplicação local para estudo, sem autenticação, controle de acesso ou implantação como serviço web. O telefone é validado pelo formato e quantidade mínima de dígitos, sem consultar a existência da linha. O Dockerfile existente não configura uma sessão gráfica; a execução desktop recomendada é local.
 
-## 📄 Licença
-
-MIT
+Licença: [MIT](LICENSE).
